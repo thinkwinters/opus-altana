@@ -1,0 +1,50 @@
+name: Validar formulários e conversões do Opus Altana
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/leads.mjs'
+      - 'dist/tracking.js'
+      - 'dist/contact.js'
+      - 'scripts/build-seo.mjs'
+      - '.github/workflows/validar-altana.yml'
+      - 'tests/leads.test.mjs'
+  pull_request:
+    paths:
+      - 'api/leads.mjs'
+      - 'dist/tracking.js'
+      - 'dist/contact.js'
+      - 'scripts/build-seo.mjs'
+      - 'tests/leads.test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verificar sintaxe
+        run: |
+          node --check api/leads.mjs
+          node --check dist/tracking.js
+          node --check dist/contact.js
+          node --check scripts/build-seo.mjs
+      - name: Testes locais com provedores simulados
+        run: node --test tests/leads.test.mjs
+      - name: Gerar artefato de produção
+        run: node scripts/build-seo.mjs
+      - name: Conferir IDs publicados
+        run: |
+          grep -q 'GTM-T83GNS9' dist-vercel/tracking.js
+          grep -q '1292606731496968' dist-vercel/tracking.js
+          grep -q 'form_contato' dist-vercel/index.html
+          grep -q 'form_whatsapp' dist-vercel/index.html
