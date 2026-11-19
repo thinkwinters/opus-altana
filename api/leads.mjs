@@ -8,6 +8,7 @@ const leadRecipients = [
 ];
 const campaignFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 const brazilTimeZone = 'America/Sao_Paulo';
+const metaPixelId = process.env.META_PIXEL_ID?.trim() || '1292606731496968';
 const placementNames = {
   contato: 'Formulário da página',
   whatsapp: 'Botão WhatsApp',
@@ -25,6 +26,22 @@ function cookieValue(request, name) {
 
 function hash(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+// Os dados recebidos são normalizados antes do SHA-256 exigido pela Meta.
+// O nome é dividido em primeiro e último nome para correspondência avançada.
+function normalizePersonName(value) {
+  return value.toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z]/g, '');
+}
+
+function splitPersonName(name) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return {
+    first: normalizePersonName(parts[0] || ''),
+    last: normalizePersonName(parts.length > 1 ? parts[parts.length - 1] : '')
+  };
 }
 
 function cleanMetadata(value, maxLength = 512) {
@@ -72,16 +89,33 @@ function getBrazilDateTime(date) {
 
 async function sendMetaLead(request, lead) {
   const accessToken = process.env.META_CAPI_ACCESS_TOKEN;
-  if (!accessToken || cookieValue(request, 'altana_medicao') !== 'granted') return;
+  if (cookieValue(request, 'altana_medicao') !== 'granted') return;
+  if (!accessToken) {
+    console.warn('meta_capi_access_token_missing');
+    return;
+  }
+
+  const normalizedEmail = lead.email.trim().toLowerCase();
+  const normalizedPhone = lead.phone.replace(/\D/g, '');
+  const names = splitPersonName(lead.name);
+  const agent = request.headers.get('user-agent')?.trim();
+  if (!agent) {
+    console.warn('meta_capi_missing_user_agent');
+    return;
+  }
 
   const userData = {
-    em: [hash(lead.email.toLowerCase())],
-    ph: [hash(lead.phone.slice(1))]
+    em: [hash(normalizedEmail)],
+    ph: [hash(normalizedPhone)],
+    external_id: [hash(normalizedEmail)],
+    client_user_agent: agent.slice(0, 512)
   };
-  const ip = request.headers.get('x-vercel-forwarded-for')?.split(',')[0].trim();
-  const agent = request.headers.get('user-agent');
+  if (names.first) userData.fn = [hash(names.first)];
+  if (names.last) userData.ln = [hash(names.last)];
+
+  const ip = (request.headers.get('x-vercel-forwarded-for')
+    || request.headers.get('x-forwarded-for') || '').split(',')[0].trim();
   if (ip && isIP(ip)) userData.client_ip_address = ip;
-  if (agent) userData.client_user_agent = agent.slice(0, 512);
 
   for (const key of ['fbp', 'fbc']) {
     const value = cookieValue(request, '_' + key);
@@ -89,7 +123,7 @@ async function sendMetaLead(request, lead) {
   }
 
   try {
-    const response = await fetch('https://graph.facebook.com/v25.0/1292606731496968/events', {
+    const response = await fetch('https://graph.facebook.com/v25.0/' + encodeURIComponent(metaPixelId) + '/events', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + accessToken,
@@ -101,9 +135,9 @@ async function sendMetaLead(request, lead) {
           event_id: lead.requestId,
           event_time: Math.floor(Date.now() / 1000),
           action_source: 'website',
-          event_source_url: new URL('/', request.url).href,
+          event_source_url: lead.pageUrl,
           user_data: userData,
-          custom_data: { form_id: lead.formId, lead_placement: lead.placement }
+          custom_data: { form_id: lead.formId, lead_placement: lead.placement, content_name: 'Opus Altana' }
         }]
       }),
       signal: AbortSignal.timeout(3500)
@@ -228,7 +262,7 @@ export default {
       return reply(502);
     }
 
-    await sendMetaLead(request, { email, phone, requestId, formId, placement });
+    await sendMetaLead(request, { name, email, phone, requestId, formId, placement, pageUrl: page.href });
     return reply(200, { ok: true, eventId: requestId });
   }
 };

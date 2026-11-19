@@ -63,6 +63,22 @@ function absolutizeStructuredData(html) {
 
 await rm(output, { recursive: true, force: true });
 await cp(source, output, { recursive: true });
+
+// Identificadores públicos opcionais; não coloque credenciais nesta substituição.
+const gtmContainer = process.env.GTM_CONTAINER_ID?.trim() || 'GTM-T83GNS9';
+const pixelId = process.env.META_PIXEL_ID?.trim() || '1292606731496968';
+if (!/^GTM-[A-Z0-9]+$/.test(gtmContainer) || !/^\\d+$/.test(pixelId)) {
+  throw new Error('GTM_CONTAINER_ID e META_PIXEL_ID devem conter identificadores válidos.');
+}
+const trackingTarget = new URL('tracking.js', output);
+const trackingSource = await readFile(trackingTarget, 'utf8');
+if (!trackingSource.includes("'GTM-T83GNS9'") || !trackingSource.includes("'1292606731496968'")) {
+  throw new Error('Identificadores base do tracking não encontrados.');
+}
+await writeFile(trackingTarget, trackingSource
+  .replace("const containerId = 'GTM-T83GNS9';", "const containerId = '" + gtmContainer + "';")
+  .replace("const pixelId = '1292606731496968';", "const pixelId = '" + pixelId + "';"));
+
 for (const [file, path, main] of [
   ['index.html', '/', true],
   ['politica-de-privacidade.html', '/politica-de-privacidade.html', false]
