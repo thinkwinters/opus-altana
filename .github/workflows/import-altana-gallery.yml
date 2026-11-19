@@ -1,4 +1,5 @@
 name: Importar perspectivas do Opus Altana
+# Atualização: priorizar imagens HD antes das miniaturas
 
 on:
   push:
