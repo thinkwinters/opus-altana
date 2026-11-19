@@ -100,18 +100,34 @@ IMAGES = [
 DEST = Path("dist/assets")
 DEST.mkdir(parents=True, exist_ok=True)
 for filename, source in IMAGES:
-    url = BASE + source
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AltanaMediaImport/1.0)"})
-    with urlopen(req, timeout=30) as response:
-        content = response.read()
-    if len(content) < 5000:
-        raise ValueError(f"Imagem inválida: {url} ({len(content)} bytes)")
-    with Image.open(BytesIO(content)) as photo:
-        photo = photo.convert("RGB")
-        if photo.width > 1440:
-            height = max(1, round(photo.height * (1440 / photo.width)))
-            photo = photo.resize((1440, height), Image.Resampling.LANCZOS)
-        target = DEST / filename
-        photo.save(target, "WEBP", quality=82, method=6)
-        print(f"{target} {photo.width}x{photo.height} ({target.stat().st_size} B)")
+    # A origem usa sufixo _p para a miniatura (500 px).
+    # Preferir a versão sem sufixo quando existir e tiver resolução maior.
+    candidates = [BASE + source.replace("_p.", "."), BASE + source]
+    best_photo = None
+    best_url = None
+    for url in candidates:
+        try:
+            req = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AltanaMediaImport/1.0)"})
+            with urlopen(req, timeout=30) as response:
+                content = response.read()
+            if len(content) < 5000:
+                continue
+            with Image.open(BytesIO(content)) as opened:
+                photo = opened.convert("RGB")
+                if best_photo is None or photo.width * photo.height > best_photo.width * best_photo.height:
+                    best_photo = photo
+                    best_url = url
+            if best_photo.width >= 1150:
+                break
+        except (OSError, ValueError) as error:
+            print(f"Fonte indisponível: {url} ({error})")
+    if best_photo is None:
+        raise ValueError(f"Não foi possível obter a imagem {filename}")
+    photo = best_photo
+    if photo.width > 1440:
+        height = max(1, round(photo.height * (1440 / photo.width)))
+        photo = photo.resize((1440, height), Image.Resampling.LANCZOS)
+    target = DEST / filename
+    photo.save(target, "WEBP", quality=82, method=6)
+    print(f"{target} {photo.width}x{photo.height} ({target.stat().st_size} B) | {best_url}")
 print(f"Importadas {len(IMAGES)} perspectivas.")
