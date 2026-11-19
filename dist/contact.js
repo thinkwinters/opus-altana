@@ -2,7 +2,6 @@
 
 const leadEndpoint = document.body.dataset.leadEndpoint;
 const salesWhatsApp = document.body.dataset.salesWhatsapp;
-const recipients = document.body.dataset.leadDraftRecipients;
 const favoriteCountries = ['br', 'pt', 'us', 'es'];
 const interfaceTranslations = {
   selectedCountryAriaLabel: "Alterar o país do número de telefone. Selecionado: ${countryName} (${dialCode})",
@@ -81,12 +80,6 @@ function contactDetails(lead) {
   return ['Nome: ' + lead.name, 'E-mail: ' + lead.email, 'WhatsApp: ' + lead.phone];
 }
 
-function emailDraft(lead) {
-  if (!recipients) return null;
-  const body = ['Olá, gostaria de consultar os lotes disponíveis e as condições no Opus Altana.', '', ...contactDetails(lead)].join('\r\n');
-  return 'mailto:' + recipients + '?subject=' + encodeURIComponent('Consulta sobre o Opus Altana') + '&body=' + encodeURIComponent(body);
-}
-
 function whatsappLink(lead, withDetails) {
   if (!salesWhatsApp) return null;
   const message = ['Olá, vim pelo site do Opus Altana e gostaria de receber informações.'];
@@ -102,18 +95,11 @@ function bindContact(form) {
   const contactFields = [name, email, phone];
   const submit = form.querySelector('button[type="submit"]');
   const status = form.querySelector('.lead-status');
-  const alternative = form.querySelector('.lead-alternative');
   const widget = phoneField(phone);
   let lastAttempt;
 
   function placement() {
     return source === 'contact' ? 'contato' : contactTrigger?.dataset.leadPlacement ?? 'whatsapp';
-  }
-
-  function offerLink(href, text) {
-    alternative.href = href;
-    alternative.textContent = text;
-    alternative.hidden = false;
   }
 
   function setBusy(busy) {
@@ -129,7 +115,6 @@ function bindContact(form) {
     phone.setCustomValidity('');
     name.setCustomValidity('');
     status.textContent = '';
-    alternative.hidden = true;
     lastAttempt = undefined;
   });
 
@@ -167,51 +152,41 @@ function bindContact(form) {
     if (lead.website || !lead.consent) return;
     window.altanaTracking?.recordFormSubmit?.(form.id, lead.placement);
 
-    const draft = source === 'contact' ? emailDraft(lead) : null;
-    const fallback = draft ?? whatsappLink(lead, true);
-    const fallbackLabel = draft ? 'Enviar consulta por e-mail' : 'Continuar no WhatsApp';
+    let delivered = false;
+    if (leadEndpoint) {
+      setBusy(true);
+      status.textContent = 'Enviando sua consulta…';
 
-    if (!leadEndpoint) {
-      if (fallback) {
-        offerLink(fallback, fallbackLabel);
-        status.textContent = draft ? 'A consulta está pronta para enviar por e-mail.' : 'Continue a consulta pelo WhatsApp.';
-        window.location.assign(fallback);
+      try {
+        const fingerprint = JSON.stringify(lead);
+        if (lastAttempt?.fingerprint !== fingerprint) {
+          lastAttempt = { fingerprint, id: crypto.randomUUID() };
+        }
+        const response = await fetch(leadEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...lead, requestId: lastAttempt.id }),
+          signal: AbortSignal.timeout(15000)
+        });
+        if (response.ok) {
+          const result = await response.json();
+          delivered = result.ok === true;
+          if (delivered) window.altanaTracking?.recordLead?.(result.eventId, form.id, lead.placement);
+        }
+      } catch {
+        // A consulta validada continua pelo WhatsApp quando o serviço de e-mail falha.
+      } finally {
+        setBusy(false);
       }
+    }
+
+    const next = whatsappLink(lead, !delivered);
+    if (next) {
+      status.textContent = delivered ? 'Consulta enviada. Abrindo o WhatsApp…' : 'Abrindo o WhatsApp para continuar a consulta…';
+      window.location.assign(next);
       return;
     }
-
-    setBusy(true);
-    status.textContent = 'Enviando sua consulta…';
-    alternative.hidden = true;
-
-    try {
-      const fingerprint = JSON.stringify(lead);
-      if (lastAttempt?.fingerprint !== fingerprint) {
-        lastAttempt = { fingerprint, id: crypto.randomUUID() };
-      }
-      const response = await fetch(leadEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lead, requestId: lastAttempt.id }),
-        signal: AbortSignal.timeout(15000)
-      });
-      if (!response.ok) throw new Error('Envio não confirmado.');
-      const result = await response.json();
-      if (!result.ok) throw new Error('Envio não confirmado.');
-      window.altanaTracking?.recordLead(result.eventId, form.id, lead.placement);
-
-      const next = whatsappLink(lead, false);
-      status.textContent = next ? 'Consulta enviada. Continue pelo WhatsApp.' : 'Consulta enviada. A equipe vai responder pelo contato informado.';
-      if (next) {
-        offerLink(next, 'Abrir WhatsApp');
-        window.location.assign(next);
-      }
-    } catch {
-      status.textContent = fallback ? 'O envio por e-mail está indisponível. Continue pelo link abaixo.' : 'O envio está indisponível. Tente novamente.';
-      if (fallback) offerLink(fallback, fallbackLabel);
-    } finally {
-      setBusy(false);
-    }
+    status.textContent = delivered ? 'Consulta enviada. A equipe vai responder pelo contato informado.' : 'O envio está indisponível. Tente novamente.';
   });
 }
 

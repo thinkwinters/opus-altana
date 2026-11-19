@@ -2,7 +2,7 @@ import { cp, readFile, rm, writeFile } from 'node:fs/promises';
 
 const source = new URL('../dist/', import.meta.url);
 const output = new URL('../dist-vercel/', import.meta.url);
-const domain = process.env.SITE_URL?.trim() || process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+const domain = process.env.SITE_URL?.trim() || 'https://opusaltanacondominio.com/';
 const isPreview = ['preview', 'development'].includes(process.env.VERCEL_ENV);
 const headSlot = /<!-- seo:start -->[\s\S]*?<!-- seo:end -->/;
 

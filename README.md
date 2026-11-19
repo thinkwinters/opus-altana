@@ -15,15 +15,16 @@ Importe o repositório na Vercel com a raiz do projeto no mesmo nível de `verce
 
 ## Busca e compartilhamento
 
-A produção usa o domínio do projeto informado pela Vercel para gerar a URL canônica, a imagem de compartilhamento e o sitemap. Configure `SITE_URL` com a raiz HTTPS para indicar um domínio de produção específico. As prévias recebem `noindex`. A FAQ visível contém a marcação de perguntas e respostas e usa o Book Digital Opus Altana como referência.
+A produção usa `https://opusaltanacondominio.com/` para gerar a URL canônica, a imagem de compartilhamento e o sitemap. A variável `SITE_URL` permite indicar outro domínio HTTPS. As prévias recebem `noindex`. A FAQ visível contém a marcação de perguntas e respostas e usa o Book Digital Opus Altana como referência.
 
 ## Envio de consultas
 
-Configure `RESEND_API_KEY`, `LEADS_FROM_EMAIL` e `LEADS_TO_EMAILS` nas variáveis de ambiente da Vercel. O remetente deve usar um domínio verificado no Resend. Separe os destinatários por vírgula. Os nomes das variáveis constam em `.env.example`.
+Conecte o Resend pelo Marketplace da Vercel ao projeto. A integração fornece `RESEND_API_KEY`. Configure `LEADS_FROM_EMAIL` com um remetente de domínio verificado no Resend e `LEADS_TO_EMAILS` com os destinatários separados por vírgula. Os nomes das variáveis constam em `.env.example`.
 
-Com o envio automático ativo, a consulta chega à equipe por e-mail e a página encaminha o visitante ao WhatsApp comercial. A página oferece uma forma de continuar o atendimento quando o envio automático falha.
+Os formulários redirecionam automaticamente para o WhatsApp comercial. A API envia a consulta por e-mail antes do redirecionamento. Caso o serviço de e-mail esteja indisponível, o WhatsApp abre com os dados da consulta preenchidos.
 
 - [Importação de repositórios do GitHub na Vercel](https://vercel.com/docs/git/vercel-for-github)
+- [Integração do Resend no Marketplace da Vercel](https://vercel.com/marketplace/resend)
 - [Envio de e-mails no Resend](https://resend.com/docs/api-reference/emails/send-email)
 
 ## Medição de conversões

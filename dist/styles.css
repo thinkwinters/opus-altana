@@ -678,13 +678,12 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 .whatsapp-dialog .iti__country-list { max-height: min(11.5rem, 30dvh); overscroll-behavior: contain; }
 .lead-consent { display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.84rem; line-height: 1.5; }
 .lead-consent input { flex: 0 0 auto; width: 1rem; height: 1rem; margin: 0.14rem 0 0; accent-color: var(--forest); }
-.lead-consent a, .whatsapp-privacy a, .lead-alternative { text-decoration: underline; text-underline-offset: 0.19em; }
+.lead-consent a, .whatsapp-privacy a { text-decoration: underline; text-underline-offset: 0.19em; }
 .lead-status:empty { margin: 0; }
 .lead-status { margin-top: 0.82rem; font-size: 0.85rem; }
 .contact-submit { width: 100%; margin-top: 1.25rem; background: var(--forest); color: var(--cream); }
 .contact-submit:hover { background: var(--deep); }
 .contact-submit:focus-visible { outline-color: var(--forest); }
-.lead-alternative { display: inline-block; margin-top: 0.7rem; font-size: 0.875rem; font-weight: 700; }
 
 
 .section-faq { background: var(--ground); }
@@ -718,6 +717,8 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 .faq-list summary:focus-visible { outline-offset: -2px; }
 .faq-list p { max-width: 65ch; padding: 0.1rem 2rem 1rem 0.25rem; color: var(--muted); }
 .faq-list p a { text-underline-offset: 0.22em; }
+.faq-points { max-width: 66ch; margin: 0; padding: 0.1rem 1.6rem 1rem 1.4rem; color: var(--muted); }
+.faq-points li + li { margin-top: 0.36rem; }
 
 .faq-toggle { position: relative; flex: 0 0 0.85rem; height: 0.85rem; }
 .faq-toggle::before, .faq-toggle::after { position: absolute; inset: 50% 0 auto; height: 1px; background: currentColor; content: ""; }
