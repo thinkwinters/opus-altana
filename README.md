@@ -19,9 +19,15 @@ A produção usa `https://opusaltanacondominio.com/` para gerar a URL canônica,
 
 ## Envio de consultas
 
-Conecte o Resend pelo Marketplace da Vercel ao projeto. A integração fornece `RESEND_API_KEY`. Configure `LEADS_FROM_EMAIL` com um remetente de domínio verificado no Resend e `LEADS_TO_EMAILS` com os destinatários separados por vírgula. Os nomes das variáveis constam em `.env.example`.
+O envio usa a API do **Resend**, como no FGR Vendas. Configure as variáveis privadas `RESEND_API_KEY` e `LEAD_FROM` (remetente autorizado em um domínio verificado no Resend) no projeto implantado. O nome legado `LEADS_FROM_EMAIL` também funciona como alternativa. Não grave a chave real no repositório.
 
-Os formulários redirecionam automaticamente para o WhatsApp comercial. A API envia a consulta por e-mail antes do redirecionamento. Caso o serviço de e-mail esteja indisponível, o WhatsApp abre com os dados da consulta preenchidos.
+Todos os envios são destinados a **Thiagoimoveisnatal@gmail.com** e **therrysantos4@gmail.com**, definidos em `api/leads.mjs`. Não é necessário cadastrar `LEAD_RECIPIENTS` nem `LEADS_TO_EMAILS` neste projeto. É possível utilizar a mesma conta Resend do FGR Vendas, caso ela permita o uso do remetente verificado.
+
+Os formulários `form_contato` e `form_whatsapp` enviam nome, e-mail, telefone, origem, URL **completa** da página, data/hora do servidor convertidas para `America/Sao_Paulo`, user agent da requisição e UTMs existentes na URL. A API valida a origem da página e utiliza um identificador idempotente por tentativa para reduzir e-mails duplicados.
+
+**Confirmação:** só após o Resend aceitar a mensagem e fornecer um ID a aplicação informa sucesso, registra a conversão e abre o WhatsApp comercial. Se o envio não for confirmado, o formulário exibe erro e a opção de continuar manualmente pelo WhatsApp (com dados preenchidos); não registra `generate_lead` nem redireciona automaticamente.
+
+**Publicação:** conecte o repositório ao projeto Vercel, configure as variáveis de produção e gere um novo deploy. Teste os dois formulários no domínio publicado e verifique os registros do Resend e as caixas de entrada. Aceite do Resend não significa garantia de entrega final.
 
 - [Importação de repositórios do GitHub na Vercel](https://vercel.com/docs/git/vercel-for-github)
 - [Integração do Resend no Marketplace da Vercel](https://vercel.com/marketplace/resend)

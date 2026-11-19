@@ -2,6 +2,12 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 
 const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const leadRecipients = [
+  'Thiagoimoveisnatal@gmail.com',
+  'therrysantos4@gmail.com'
+];
+const campaignFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+const brazilTimeZone = 'America/Sao_Paulo';
 const placementNames = {
   contato: 'Formulário da página',
   whatsapp: 'Botão WhatsApp',
@@ -19,6 +25,49 @@ function cookieValue(request, name) {
 
 function hash(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function cleanMetadata(value, maxLength = 512) {
+  return typeof value === 'string'
+    ? value.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, maxLength)
+    : '';
+}
+
+function getOriginPage(request, lead) {
+  const requestOrigin = new URL(request.url).origin;
+  const original = typeof lead?.pageUrl === 'string' ? lead.pageUrl.trim() : '';
+  const referrer = request.headers.get('referer') || '';
+  if (original.length > 2500 || (!original && !referrer)) return null;
+
+  try {
+    const page = new URL(original || referrer);
+    if ((page.protocol !== 'https:' && page.protocol !== 'http:')
+        || page.origin !== requestOrigin
+        || page.username || page.password
+        || page.pathname.startsWith('/api/')) return null;
+    return page;
+  } catch {
+    return null;
+  }
+}
+
+function getBrazilDateTime(date) {
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: brazilTimeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal')
+    .map((part) => [part.type, part.value]));
+  return {
+    date: values.day + '/' + values.month + '/' + values.year,
+    time: values.hour + ':' + values.minute + ':' + values.second
+  };
 }
 
 async function sendMetaLead(request, lead) {
@@ -70,7 +119,16 @@ export default {
     if (request.method !== 'POST') return reply(405, { ok: false }, { Allow: 'POST' });
 
     const origin = request.headers.get('origin');
-    if (origin && origin !== new URL(request.url).origin) return reply(403);
+    const requestOrigin = new URL(request.url).origin;
+    if (origin && origin !== requestOrigin) return reply(403);
+    const referrer = request.headers.get('referer');
+    if (referrer) {
+      try {
+        if (new URL(referrer).origin !== requestOrigin) return reply(403);
+      } catch {
+        return reply(403);
+      }
+    }
     if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
       return reply(415);
     }
@@ -78,7 +136,7 @@ export default {
     let lead;
     try {
       const content = await request.text();
-      if (content.length > 2048) return reply(413);
+      if (content.length > 4096) return reply(413);
       lead = JSON.parse(content);
     } catch {
       return reply(400);
@@ -89,8 +147,9 @@ export default {
     const phone = typeof lead?.phone === 'string' ? lead.phone.trim() : '';
     const source = lead?.source;
     const requestId = typeof lead?.requestId === 'string' ? lead.requestId : '';
+    const page = getOriginPage(request, lead);
 
-    if (lead?.website || lead?.consent !== true
+    if (lead?.website || lead?.consent !== true || !page
         || (source !== 'contact' && source !== 'whatsapp')
         || name.length < 2 || name.length > 100 || /[\r\n]/.test(name)
         || email.length > 160 || !emailPattern.test(email)
@@ -100,14 +159,43 @@ export default {
     }
 
     const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.LEADS_FROM_EMAIL;
-    const recipients = (process.env.LEADS_TO_EMAILS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
-    if (!apiKey || !from || !recipients.length || recipients.some((value) => !emailPattern.test(value))) {
+    // Mesmo nome de remetente da FGR Vendas, com compatibilidade para versões anteriores do Altana.
+    const from = process.env.LEAD_FROM || process.env.LEADS_FROM_EMAIL;
+    if (!apiKey || !from) {
+      console.error('lead_email_configuration_incomplete');
       return reply(503);
     }
 
     const formId = source === 'contact' ? 'form_contato' : 'form_whatsapp';
     const placement = source === 'contact' ? 'contato' : lead.placement === 'financiamento' ? 'financiamento' : 'whatsapp';
+    const formName = source === 'contact' ? 'Formulário de contato' : 'Atendimento via WhatsApp';
+    const receivedAt = new Date();
+    const dateTime = getBrazilDateTime(receivedAt);
+    const userAgent = cleanMetadata(request.headers.get('user-agent'), 512) || 'Não informado';
+    const campaigns = campaignFields
+      .map((key) => [key, cleanMetadata(page.searchParams.get(key), 160)])
+      .filter(([, value]) => value)
+      .map(([key, value]) => key + ': ' + value);
+    const emailText = [
+      'Novo lead | Opus Altana',
+      '',
+      'DADOS DO FORMULÁRIO',
+      'Nome: ' + name,
+      'E-mail: ' + email,
+      'Telefone / WhatsApp: ' + phone,
+      'Formulário: ' + formName,
+      'Origem do formulário: ' + placementNames[placement],
+      '',
+      'DADOS DO ACESSO',
+      'URL da página: ' + page.href,
+      'Data: ' + dateTime.date,
+      'Hora: ' + dateTime.time + ' (horário de Brasília)',
+      'Data/hora UTC: ' + receivedAt.toISOString(),
+      'User agent: ' + userAgent,
+      ...(campaigns.length ? ['', 'CAMPANHA', ...campaigns] : []),
+      '',
+      'ID da consulta: ' + requestId
+    ].join('\n');
 
     try {
       const delivery = await fetch('https://api.resend.com/emails', {
@@ -119,15 +207,24 @@ export default {
         },
         body: JSON.stringify({
           from,
-          to: recipients,
-          subject: 'Nova consulta sobre o Opus Altana',
+          to: leadRecipients,
+          subject: 'Novo lead | Opus Altana | ' + placementNames[placement],
           reply_to: email,
-          text: ['Nova consulta de lotes e condições pelo site Opus Altana.', '', 'Nome: ' + name, 'E-mail: ' + email, 'WhatsApp: ' + phone, 'Origem: ' + placementNames[placement], 'Formulário: ' + formId].join('\n')
+          text: emailText
         }),
         signal: AbortSignal.timeout(9000)
       });
-      if (!delivery.ok) return reply(502);
+      if (!delivery.ok) {
+        console.error('lead_email_rejected', delivery.status);
+        return reply(502);
+      }
+      const accepted = await delivery.json();
+      if (!accepted?.id) {
+        console.error('lead_email_unconfirmed');
+        return reply(502);
+      }
     } catch {
+      console.error('lead_email_provider_unavailable');
       return reply(502);
     }
 

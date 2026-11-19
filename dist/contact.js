@@ -143,6 +143,7 @@ function bindContact(form) {
       name: fullName,
       email: String(data.get('email')).trim(),
       phone: fullPhone,
+      pageUrl: window.location.href,
       website: String(data.get('website') ?? ''),
       consent: source === 'whatsapp' || data.get('consent') === 'on',
       source,
@@ -174,19 +175,35 @@ function bindContact(form) {
           if (delivered) window.altanaTracking?.recordLead?.(result.eventId, form.id, lead.placement);
         }
       } catch {
-        // A consulta validada continua pelo WhatsApp quando o serviço de e-mail falha.
+        // Não registra conversão nem confirmação sem o aceite do provedor de e-mail.
       } finally {
         setBusy(false);
       }
     }
 
-    const next = whatsappLink(lead, !delivered);
+    if (!delivered) {
+      status.textContent = 'Não foi possível confirmar o envio por e-mail. Tente novamente ou ';
+      const fallback = whatsappLink(lead, true);
+      if (fallback) {
+        const link = document.createElement('a');
+        link.href = fallback;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'continue pelo WhatsApp.';
+        status.append(link);
+      } else {
+        status.textContent = 'Não foi possível confirmar o envio por e-mail. Tente novamente.';
+      }
+      return;
+    }
+
+    const next = whatsappLink(lead, false);
     if (next) {
-      status.textContent = delivered ? 'Consulta enviada. Abrindo o WhatsApp…' : 'Abrindo o WhatsApp para continuar a consulta…';
+      status.textContent = 'Consulta enviada por e-mail. Abrindo o WhatsApp…';
       window.location.assign(next);
       return;
     }
-    status.textContent = delivered ? 'Consulta enviada. A equipe vai responder pelo contato informado.' : 'O envio está indisponível. Tente novamente.';
+    status.textContent = 'Consulta enviada por e-mail. A equipe vai responder pelo contato informado.';
   });
 }
 
