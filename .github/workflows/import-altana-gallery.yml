@@ -1,0 +1,43 @@
+name: Importar perspectivas do Opus Altana
+
+on:
+  push:
+    paths:
+      - ".github/workflows/import-altana-gallery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Obter repositório
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Pillow
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Baixar e otimizar 21 perspectivas
+        run: python scripts/import-altana-gallery.py
+
+      - name: Registrar imagens no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/assets/wellness-*.webp dist/assets/grand-slam-*.webp dist/assets/kids-*.webp dist/assets/social-*.webp dist/assets/pet-*.webp
+          if git diff --cached --quiet; then
+            echo "Perspectivas já estão atualizadas."
+          else
+            git commit -m "Publica 21 perspectivas do book no Opus Altana"
+            git push origin HEAD:main
+          fi
