@@ -6,6 +6,7 @@
   const cookieName = 'altana_medicao';
   const banner = document.querySelector('#preferencias-de-cookies');
   const preferences = document.querySelector('button[aria-controls="preferencias-de-cookies"]');
+  const startedForms = new Set();
   const confirmedLeads = new Set();
   const dataLayer = window.dataLayer ??= [];
   let choice = document.cookie.split(/;\s*/).find((entry) => entry.startsWith(cookieName + '='))?.split('=')[1];
@@ -38,6 +39,11 @@
     tagsLoaded = true;
 
     dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
+    dataLayer.push({
+      event: 'page_view',
+      page_location: location.origin + location.pathname,
+      page_title: document.title
+    });
     loadScript('https://www.googletagmanager.com/gtm.js?id=' + containerId);
 
     const needsPixelScript = !window.fbq;
@@ -95,6 +101,16 @@
   else if (choice !== 'denied') setBanner(true);
 
   window.altanaTracking = {
+    recordFormStart(formId, placement) {
+      const key = formId + '/' + placement;
+      if (choice !== 'granted' || startedForms.has(key)) return;
+      startedForms.add(key);
+      dataLayer.push({ event: 'form_start', form_id: formId, lead_placement: placement });
+    },
+    recordFormSubmit(formId, placement) {
+      if (choice !== 'granted') return;
+      dataLayer.push({ event: 'form_submit', form_id: formId, lead_placement: placement });
+    },
     recordLead(eventId, formId, placement) {
       if (choice !== 'granted' || !eventId || confirmedLeads.has(eventId)) return;
       confirmedLeads.add(eventId);

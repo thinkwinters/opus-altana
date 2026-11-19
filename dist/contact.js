@@ -50,7 +50,6 @@ function phoneField(input) {
     countryNameLocale: 'pt-BR',
     uiTranslations: interfaceTranslations,
     countrySelectorMode: intlTelInput.COUNTRY_SELECTOR_MODE.DROPDOWN,
-    dropdownParent: input.closest('dialog'),
     separateDialCode: false,
     strictMode: true,
     formatAsYouType: true,
@@ -98,12 +97,18 @@ function whatsappLink(lead, withDetails) {
 function bindContact(form) {
   const source = form.dataset.leadSource;
   const name = form.elements.namedItem('name');
+  const email = form.elements.namedItem('email');
   const phone = form.elements.namedItem('phone');
+  const contactFields = [name, email, phone];
   const submit = form.querySelector('button[type="submit"]');
   const status = form.querySelector('.lead-status');
   const alternative = form.querySelector('.lead-alternative');
   const widget = phoneField(phone);
   let lastAttempt;
+
+  function placement() {
+    return source === 'contact' ? 'contato' : contactTrigger?.dataset.leadPlacement ?? 'whatsapp';
+  }
 
   function offerLink(href, text) {
     alternative.href = href;
@@ -117,7 +122,10 @@ function bindContact(form) {
   }
 
   form.hidden = false;
-  form.addEventListener('input', () => {
+  form.addEventListener('input', (event) => {
+    if (contactFields.includes(event.target)) {
+      window.altanaTracking?.recordFormStart?.(form.id, placement());
+    }
     phone.setCustomValidity('');
     name.setCustomValidity('');
     status.textContent = '';
@@ -153,10 +161,11 @@ function bindContact(form) {
       website: String(data.get('website') ?? ''),
       consent: source === 'whatsapp' || data.get('consent') === 'on',
       source,
-      placement: source === 'contact' ? 'contato' : contactTrigger?.dataset.leadPlacement ?? 'whatsapp'
+      placement: placement()
     };
 
     if (lead.website || !lead.consent) return;
+    window.altanaTracking?.recordFormSubmit?.(form.id, lead.placement);
 
     const draft = source === 'contact' ? emailDraft(lead) : null;
     const fallback = draft ?? whatsappLink(lead, true);

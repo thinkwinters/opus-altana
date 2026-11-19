@@ -444,6 +444,24 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 .plan-image { position: relative; width: 100%; }
 .plan-image img { width: 100%; height: auto; }
 
+.plan-expand {
+  position: absolute;
+  z-index: 2;
+  inset: clamp(0.7rem, 1.7vw, 1.5rem) clamp(0.7rem, 1.7vw, 1.5rem) auto auto;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--rule-inverse);
+  background: #51645a;
+  color: var(--cream);
+  transition: background-color 180ms ease;
+}
+
+.plan-expand:hover { background: var(--forest); }
+.plan-expand:focus-visible { outline-color: var(--forest); }
+
 .plan-figure .plan-caption {
   display: flex;
   align-items: center;
@@ -456,9 +474,7 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 }
 
 .plan-caption p { max-width: 42ch; }
-.plan-actions { display: flex; flex-wrap: wrap; gap: 0 1.25rem; }
-.plan-actions .text-link { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--ink); }
-.plan-actions button { padding: 0; border: 0; background: transparent; text-decoration: underline; }
+.plan-caption .text-link { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--ink); }
 
 .plan-pin {
   position: absolute;
@@ -580,7 +596,7 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 
 .payment-price span { font: 600 0.48em/1 var(--sans); letter-spacing: 0; }
 .payment-divider { margin: 1.35rem 0 0; border: 0; border-top: 1px solid var(--rule-inverse); }
-.payment-term { font-weight: 700; }
+.payment-term { font-size: 27.5px; font-weight: 700; line-height: 1.3; }
 .payment-total .button { margin-top: 1.35rem; }
 .payment-period + .payment-period { margin-top: 1.75rem; }
 .payment-period h3 { margin-bottom: 0.7rem; font-size: clamp(1.55rem, 3vw, 2.5rem); }
@@ -616,7 +632,7 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
   font-weight: 700;
 }
 
-.lead-field input {
+.lead-field input[name] {
   display: block;
   width: 100%;
   min-height: 3rem;
@@ -629,17 +645,37 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
   line-height: 1.45;
 }
 
-.lead-field input:not([type="tel"]) { padding-inline: 0; }
-.lead-field input::placeholder { color: var(--muted); opacity: 1; }
-.lead-field input:focus-visible { outline-offset: 2px; }
+.lead-field input[name]:not([type="tel"]) { padding-inline: 0; }
+.lead-field input[name]::placeholder { color: var(--muted); opacity: 1; }
+.lead-field input[name]:focus-visible { outline-offset: 2px; }
 .lead-field .iti { display: block; width: 100%; }
 
-.contact-form .iti__dropdown-content, .whatsapp-dialog .iti__dropdown-content {
+.contact-form .iti__country-selector {
+  --iti-border-color: var(--rule);
+  --iti-country-selector-bg: var(--ground);
+  --iti-icon-color: var(--muted);
+  --iti-hover-color: var(--sand);
+  border-radius: 0;
   color: var(--ink);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 
-.whatsapp-dialog .iti__country-list { overscroll-behavior: contain; }
+.contact-form .iti__search-input {
+  min-height: 2.75rem;
+  border-radius: 0;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.contact-form .iti__search-input:focus-visible { outline-color: var(--forest); outline-offset: -2px; }
+
+/* Evita que a posição calculada pelo seletor ultrapasse a base do modal. */
+.whatsapp-dialog .iti__country-selector {
+  top: auto !important;
+  bottom: calc(100% + 0.25rem) !important;
+}
+
+.whatsapp-dialog .iti__country-list { max-height: min(11.5rem, 30dvh); overscroll-behavior: contain; }
 .lead-consent { display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.84rem; line-height: 1.5; }
 .lead-consent input { flex: 0 0 auto; width: 1rem; height: 1rem; margin: 0.14rem 0 0; accent-color: var(--forest); }
 .lead-consent a, .whatsapp-privacy a, .lead-alternative { text-decoration: underline; text-underline-offset: 0.19em; }
@@ -650,6 +686,47 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 .contact-submit:focus-visible { outline-color: var(--forest); }
 .lead-alternative { display: inline-block; margin-top: 0.7rem; font-size: 0.875rem; font-weight: 700; }
 
+
+.section-faq { background: var(--ground); }
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.45fr);
+  align-items: start;
+  gap: clamp(1.6rem, 5vw, 5rem);
+}
+
+.faq-grid h2 { font-size: clamp(2.3rem, 4vw, 4rem); text-wrap: initial; }
+.faq-list details { border-top: 1px solid var(--rule); }
+.faq-list details:last-child { border-bottom: 1px solid var(--rule); }
+
+.faq-list summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.25rem;
+  padding: 0.85rem 0.25rem;
+  list-style: none;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list summary:hover { color: var(--forest); }
+.faq-list summary:focus-visible { outline-offset: -2px; }
+.faq-list p { max-width: 65ch; padding: 0.1rem 2rem 1rem 0.25rem; color: var(--muted); }
+.faq-list p a { text-underline-offset: 0.22em; }
+
+.faq-toggle { position: relative; flex: 0 0 0.85rem; height: 0.85rem; }
+.faq-toggle::before, .faq-toggle::after { position: absolute; inset: 50% 0 auto; height: 1px; background: currentColor; content: ""; }
+.faq-toggle::after { transform: rotate(90deg); }
+.faq-list details[open] .faq-toggle::after { display: none; }
+
+@media (max-width: 900px) {
+  .faq-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 .site-footer { padding-block: 1.65rem; border-top: 1px solid #465d50; background: var(--night); color: var(--cream); }
 .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem 4rem; }
@@ -790,7 +867,7 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 .whatsapp-description { margin-bottom: 20px; font-size: 14px; line-height: 1.55; }
 .whatsapp-dialog .lead-field { margin-bottom: 15px; }
 .whatsapp-dialog .lead-field label { margin-bottom: 0.28rem; font-size: 12px; }
-.whatsapp-dialog .lead-field input { min-height: 50px; font-size: 0.9rem; }
+.whatsapp-dialog .lead-field input[name] { min-height: 50px; font-size: 0.9rem; }
 .whatsapp-privacy { font-size: 0.78rem; line-height: 1.6; }
 
 .whatsapp-submit {
@@ -927,6 +1004,7 @@ body:has(dialog[open]) { overflow: hidden; }
   .wrap { width: calc(100% - 2 * var(--gutter)); }
   .project-grid, .location-grid, .contact-grid, .gallery-intro,
   .architecture-intro, .simulator-intro, .payment-intro { grid-template-columns: minmax(0, 1fr); }
+  .payment-term { font-size: 25px; }
   .project-grid, .location-grid, .contact-grid { gap: clamp(1.7rem, 6vw, 3rem); }
 
   h2 { text-wrap: initial; }
@@ -985,7 +1063,7 @@ body:has(dialog[open]) { overflow: hidden; }
   .whatsapp-float img { width: 39px; height: 39px; }
   .whatsapp-prompt { font-size: 12px; }
   .whatsapp-dialog { padding: 22px; }
-  .whatsapp-dialog .lead-field input { font-size: 1rem; }
+  .whatsapp-dialog .lead-field input[name], .contact-form .iti__search-input { font-size: 1rem; }
   .site-footer { padding-bottom: 5.6rem; }
 }
 
