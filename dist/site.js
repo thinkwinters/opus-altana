@@ -77,7 +77,7 @@ tabs.forEach((tab, index) => {
   });
 });
 
-// Galerias do Altana: navegação no painel, sem miniaturas, expansão apenas da foto atual.
+// Galerias do Altana: navegação no painel e visualização expandida de todas as perspectivas.
 const galleryCatalog = {
   "galeria-wellness": [
     {
@@ -223,22 +223,92 @@ const galleryCatalog = {
 const galleryLightbox = document.querySelector('#galeria-ampliada');
 const galleryLightboxImage = document.querySelector('#galeria-ampliada-imagem');
 const galleryLightboxCaption = document.querySelector('#galeria-ampliada-legenda');
+const galleryLightboxHeading = document.querySelector('#galeria-ampliada-titulo');
+const galleryLightboxCounter = document.querySelector('#galeria-ampliada-contador');
+const galleryLightboxPrev = galleryLightbox.querySelector('.gallery-lightbox-prev');
+const galleryLightboxNext = galleryLightbox.querySelector('.gallery-lightbox-next');
+const galleryNames = Object.fromEntries(
+  tabs.map((tab) => [tab.getAttribute('aria-controls'), tab.textContent.trim()])
+);
+// Galeria expandida: as 26 perspectivas são acessíveis no mesmo modal, inclusive entre categorias.
+const gallerySlides = Object.entries(galleryCatalog).flatMap(([panelId, photos]) =>
+  photos.map((photo, localIndex) => ({
+    ...photo,
+    panelId,
+    localIndex,
+    galleryName: galleryNames[panelId] || 'Experiências'
+  }))
+);
 let expandedGalleryTrigger = null;
+let expandedGalleryIndex = 0;
 
-function openGalleryLightbox(photo, trigger) {
+function renderExpandedGalleryPhoto() {
+  const slide = gallerySlides[expandedGalleryIndex];
+  if (!slide) return;
+  galleryLightboxImage.src = slide.src;
+  galleryLightboxImage.alt = slide.alt;
+  galleryLightboxHeading.textContent = slide.galleryName;
+  galleryLightboxCaption.textContent = slide.caption;
+  galleryLightboxCounter.textContent = (expandedGalleryIndex + 1) + ' / ' + gallerySlides.length;
+  // Pré-carrega a próxima perspectiva sem acrescentar miniaturas à página.
+  const upcoming = gallerySlides[(expandedGalleryIndex + 1) % gallerySlides.length];
+  if (upcoming && upcoming.src !== slide.src) {
+    const nextPhoto = new Image();
+    nextPhoto.src = upcoming.src;
+  }
+}
+
+function navigateExpandedGallery(direction) {
+  if (!galleryLightbox.open || gallerySlides.length < 2) return;
+  expandedGalleryIndex = (expandedGalleryIndex + direction + gallerySlides.length) % gallerySlides.length;
+  renderExpandedGalleryPhoto();
+}
+
+function openGalleryLightbox(panelId, localIndex, trigger) {
+  const selectedIndex = gallerySlides.findIndex((slide) =>
+    slide.panelId === panelId && slide.localIndex === localIndex
+  );
+  if (selectedIndex < 0) return;
   if (typeof galleryLightbox.showModal !== 'function') {
-    window.open(photo.src, '_blank', 'noopener');
+    window.open(gallerySlides[selectedIndex].src, '_blank', 'noopener');
     return;
   }
+  expandedGalleryIndex = selectedIndex;
   expandedGalleryTrigger = trigger;
-  galleryLightboxImage.src = photo.src;
-  galleryLightboxImage.alt = photo.alt;
-  galleryLightboxCaption.textContent = photo.caption;
+  renderExpandedGalleryPhoto();
   galleryLightbox.showModal();
 }
 
+galleryLightboxPrev.addEventListener('click', () => navigateExpandedGallery(-1));
+galleryLightboxNext.addEventListener('click', () => navigateExpandedGallery(1));
+galleryLightbox.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    navigateExpandedGallery(event.key === 'ArrowRight' ? 1 : -1);
+  }
+});
+
+let galleryTouch = null;
+galleryLightbox.addEventListener('touchstart', (event) => {
+  if (!event.target.closest('.gallery-lightbox-stage') || event.target.closest('button') || event.touches.length !== 1) {
+    galleryTouch = null;
+    return;
+  }
+  galleryTouch = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+}, { passive: true });
+galleryLightbox.addEventListener('touchend', (event) => {
+  if (!galleryTouch || !galleryLightbox.open || event.changedTouches.length !== 1) return;
+  const dx = event.changedTouches[0].clientX - galleryTouch.x;
+  const dy = event.changedTouches[0].clientY - galleryTouch.y;
+  galleryTouch = null;
+  if (Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+    navigateExpandedGallery(dx < 0 ? 1 : -1);
+  }
+}, { passive: true });
+
 galleryLightbox.addEventListener('close', () => {
   galleryLightboxImage.removeAttribute('src');
+  galleryTouch = null;
   expandedGalleryTrigger?.focus({ preventScroll: true });
   expandedGalleryTrigger = null;
 });
@@ -259,12 +329,12 @@ panels.forEach((panel) => {
     image.alt = photo.alt;
     caption.textContent = photo.caption;
     counter.textContent = (current + 1) + ' / ' + photos.length;
-    expand.setAttribute('aria-label', 'Ampliar ' + photo.caption.split(' · ')[0]);
+    expand.setAttribute('aria-label', 'Abrir galeria completa a partir de ' + photo.caption.split(' · ')[0]);
   }
 
   panel.querySelector('[data-gallery-prev]').addEventListener('click', () => showPhoto(current - 1));
   panel.querySelector('[data-gallery-next]').addEventListener('click', () => showPhoto(current + 1));
-  expand.addEventListener('click', () => openGalleryLightbox(photos[current], expand));
+  expand.addEventListener('click', () => openGalleryLightbox(panel.id, current, expand));
 });
 
 const viewer = document.querySelector('#imagem-ampliada');
