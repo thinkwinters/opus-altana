@@ -544,6 +544,50 @@ h2 { font-size: var(--section-heading); text-wrap: balance; }
 
 .image-button:hover .image-action { text-decoration: underline; text-underline-offset: 0.2em; }
 
+.differences-title { font-size: clamp(2.65rem, 5vw, 4.85rem); text-wrap: balance; }
+.differences-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  margin-top: clamp(1.5rem, 2.9vw, 2.8rem);
+}
+
+.differences-image { position: relative; background: var(--stone); }
+.differences-image img { width: 100%; height: 100%; object-fit: cover; }
+.differences-image figcaption {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.85rem;
+  padding: 0.4rem 0.68rem;
+  background: var(--deep);
+  color: var(--cream);
+  font-size: 0.75rem;
+}
+
+.differences-copy {
+  display: grid;
+  align-content: center;
+  gap: 1.15rem;
+  padding: clamp(1.65rem, 4vw, 4rem);
+  background: var(--forest);
+  color: var(--cream);
+}
+
+.differences-copy :is(h2, h3) { font-size: clamp(2rem, 3.5vw, 3.35rem); text-wrap: initial; }
+.differences-copy p { color: var(--muted-light); }
+
+.differences-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.2rem, 2.7vw, 2.5rem);
+  margin: clamp(1.7rem, 3vw, 2.6rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.differences-list img { width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; }
+.differences-list h3 { margin-top: 0.9rem; font-size: clamp(1.35rem, 2.1vw, 1.85rem); line-height: 1.13; }
+.differences-list p { margin-top: 0.55rem; color: var(--muted); }
+
 .section-location { background: var(--ground); }
 .location-grid {
   display: grid;
@@ -946,6 +990,9 @@ body:has(dialog[open]) { overflow: hidden; }
   .gallery-panel h3 { font-size: clamp(1.85rem, 2.6vw, 2.3rem); }
   .simulator-intro h2 { font-size: clamp(3rem, 4.65vw, 4.7rem); }
   .plan-intro h2 { font-size: clamp(2.25rem, 3.2vw, 3.3rem); }
+  .differences-title { font-size: clamp(2.65rem, 3.75vw, 3.75rem); }
+  .differences-copy :is(h2, h3) { font-size: clamp(2rem, 2.65vw, 2.85rem); }
+  .differences-list h3 { font-size: clamp(1.35rem, 1.8vw, 1.7rem); }
   .payment-period h3 { font-size: clamp(1.55rem, 2.4vw, 2.15rem); }
   .faq-grid h2 { font-size: clamp(2.3rem, 3.2vw, 3.4rem); }
   .privacy-page h2 { font-size: clamp(1.7rem, 2.5vw, 2.2rem); }
@@ -1028,6 +1075,9 @@ body:has(dialog[open]) { overflow: hidden; }
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "intro" "map" "legend";
   }
+  .differences-feature { grid-template-columns: minmax(0, 1fr); }
+  .differences-image img { height: auto; }
+  .differences-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .payment-layout { grid-template-columns: minmax(0, 1fr); }
   .footer-inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
@@ -1057,6 +1107,7 @@ body:has(dialog[open]) { overflow: hidden; }
   .highlights dd { font-size: clamp(1.8rem, 6.8vw, 2.1rem); }
   .highlights dt { font-size: 0.78rem; line-height: 1.3; }
   .highlights .landscape-stat dd { font-size: clamp(1.25rem, 5.6vw, 1.65rem); }
+  .differences-list { grid-template-columns: minmax(0, 1fr); }
   .viewer-toolbar { flex-wrap: wrap; padding: 0.5rem 0.6rem; }
 }
 
