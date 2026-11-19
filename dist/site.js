@@ -82,7 +82,11 @@ const viewerPhoto = new Image();
 const viewerCaption = document.querySelector('#imagem-legenda');
 const viewerArea = document.querySelector('#imagem-area');
 const zoomToggle = document.querySelector('#alternar-zoom');
+const previousImage = document.querySelector('#imagem-anterior');
+const nextImage = document.querySelector('#imagem-proxima');
 let imageTrigger;
+let viewerGallery = [];
+let viewerGalleryIndex = -1;
 
 function setZoom(expanded) {
   viewerArea.classList.toggle('is-enlarged', expanded);
@@ -91,24 +95,47 @@ function setZoom(expanded) {
   viewerArea.scrollTo(0, 0);
 }
 
+function displayViewerImage(trigger) {
+  imageTrigger = trigger;
+  viewerCaption.textContent = trigger.dataset.caption || '';
+  viewerPhoto.alt = trigger.closest('figure')?.querySelector('img')?.alt ?? trigger.dataset.caption ?? '';
+  viewerPhoto.src = trigger.dataset.image;
+  viewerArea.replaceChildren(viewerPhoto);
+  zoomToggle.hidden = trigger.dataset.zoom !== 'true';
+  setZoom(false);
+}
+
+function navigateViewer(direction) {
+  if (!viewer.open || viewerGallery.length < 2) return;
+  viewerGalleryIndex = (viewerGalleryIndex + direction + viewerGallery.length) % viewerGallery.length;
+  displayViewerImage(viewerGallery[viewerGalleryIndex]);
+}
+
 document.querySelectorAll('[data-image]').forEach((trigger) => {
   trigger.addEventListener('click', () => {
     if (typeof viewer.showModal !== 'function') {
       window.open(trigger.dataset.image, '_blank', 'noopener');
       return;
     }
-    imageTrigger = trigger;
-    viewerCaption.textContent = trigger.dataset.caption;
-    viewerPhoto.alt = trigger.closest('figure')?.querySelector('img')?.alt ?? trigger.dataset.caption;
-    viewerPhoto.src = trigger.dataset.image;
-    viewerArea.replaceChildren(viewerPhoto);
-    zoomToggle.hidden = trigger.dataset.zoom !== 'true';
-    setZoom(false);
+    const galleryPanel = trigger.closest('.gallery-panel');
+    viewerGallery = galleryPanel ? Array.from(galleryPanel.querySelectorAll('[data-image]')) : [];
+    viewerGalleryIndex = viewerGallery.indexOf(trigger);
+    previousImage.hidden = nextImage.hidden = viewerGallery.length < 2;
+    displayViewerImage(trigger);
     viewer.showModal();
   });
 });
 
+previousImage.addEventListener('click', () => navigateViewer(-1));
+nextImage.addEventListener('click', () => navigateViewer(1));
 zoomToggle.addEventListener('click', () => setZoom(zoomToggle.getAttribute('aria-pressed') === 'false'));
+document.addEventListener('keydown', (event) => {
+  if (!viewer.open || viewerGallery.length < 2) return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    navigateViewer(event.key === 'ArrowRight' ? 1 : -1);
+  }
+});
 viewer.addEventListener('click', (event) => {
   if (event.target === viewer) viewer.close();
 });
@@ -116,6 +143,8 @@ viewer.addEventListener('close', () => {
   viewerArea.replaceChildren();
   viewerPhoto.removeAttribute('src');
   imageTrigger?.focus({ preventScroll: true });
+  viewerGallery = [];
+  viewerGalleryIndex = -1;
 });
 
 const planMap = document.querySelector('#implantacao-mapa');
