@@ -67,7 +67,7 @@ await cp(source, output, { recursive: true });
 // Identificadores públicos opcionais; não coloque credenciais nesta substituição.
 const gtmContainer = process.env.GTM_CONTAINER_ID?.trim() || 'GTM-T83GNS9';
 const pixelId = process.env.META_PIXEL_ID?.trim() || '1292606731496968';
-if (!/^GTM-[A-Z0-9]+$/.test(gtmContainer) || !/^\\d+$/.test(pixelId)) {
+if (!/^GTM-[A-Z0-9]+$/.test(gtmContainer) || !/^\d+$/.test(pixelId)) {
   throw new Error('GTM_CONTAINER_ID e META_PIXEL_ID devem conter identificadores válidos.');
 }
 const trackingTarget = new URL('tracking.js', output);
