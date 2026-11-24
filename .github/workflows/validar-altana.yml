@@ -9,14 +9,14 @@ on:
       - 'dist/contact.js'
       - 'scripts/build-seo.mjs'
       - '.github/workflows/validar-altana.yml'
-      - 'tests/leads.test.mjs'
+      - 'tests/*.test.mjs'
   pull_request:
     paths:
       - 'api/leads.mjs'
       - 'dist/tracking.js'
       - 'dist/contact.js'
       - 'scripts/build-seo.mjs'
-      - 'tests/leads.test.mjs'
+      - 'tests/*.test.mjs'
 
 permissions:
   contents: read
@@ -39,7 +39,7 @@ jobs:
           node --check dist/contact.js
           node --check scripts/build-seo.mjs
       - name: Testes locais com provedores simulados
-        run: node --test tests/leads.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Gerar artefato de produção
         run: node scripts/build-seo.mjs
       - name: Conferir IDs publicados
@@ -48,3 +48,4 @@ jobs:
           grep -q '1292606731496968' dist-vercel/tracking.js
           grep -q 'form_contato' dist-vercel/index.html
           grep -q 'form_whatsapp' dist-vercel/index.html
+

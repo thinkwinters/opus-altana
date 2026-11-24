@@ -108,6 +108,8 @@ function bindContact(form) {
   }
 
   form.hidden = false;
+  // Os eventos de conversão são emitidos após a resposta da API, não pelo clique.
+  submit.addEventListener('click', (event) => event.stopPropagation());
   form.addEventListener('input', (event) => {
     if (contactFields.includes(event.target)) {
       window.altanaTracking?.recordFormStart?.(form.id, placement());
@@ -120,6 +122,8 @@ function bindContact(form) {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    // Impede que a coleta automática trate uma tentativa como envio confirmado.
+    event.stopPropagation();
     if (submit.disabled || !form.reportValidity()) return;
     const readyWidget = widget?.promise ? await widget.promise.then(() => widget, () => null) : widget;
     if (submit.disabled) return;
@@ -151,7 +155,6 @@ function bindContact(form) {
     };
 
     if (lead.website || !lead.consent) return;
-    window.altanaTracking?.recordFormSubmit?.(form.id, lead.placement);
 
     let delivered = false;
     if (leadEndpoint) {
@@ -190,6 +193,8 @@ function bindContact(form) {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.textContent = 'continue pelo WhatsApp.';
+        // O envio por e-mail falhou; a alternativa de atendimento não confirma um lead.
+        link.addEventListener('click', (event) => event.stopPropagation());
         status.append(link);
       } else {
         status.textContent = 'Não foi possível confirmar o envio por e-mail. Tente novamente.';
@@ -228,3 +233,4 @@ contactDialog.addEventListener('close', () => {
 });
 
 document.querySelectorAll('[data-lead-source]').forEach(bindContact);
+

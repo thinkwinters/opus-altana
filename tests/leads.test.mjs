@@ -119,6 +119,27 @@ test('Lead CAPI respeita a opção de cookies', async () => {
   });
 });
 
+test('contato e WhatsApp entregam sem escolha de cookies e sem evento CAPI', async () => {
+  for (const source of ['contact', 'whatsapp']) {
+    await withMocks({}, async (calls) => {
+      const response = await handler.fetch(request({ source }, { cookie: '' }));
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).ok, true);
+      assert.equal(calls.length, 1);
+      assert.match(calls[0].url, /api\.resend\.com\/emails/);
+    });
+  }
+});
+
+test('WhatsApp entrega com medição recusada sem reverter a recusa nem enviar CAPI', async () => {
+  await withMocks({}, async (calls) => {
+    const response = await handler.fetch(request({ source: 'whatsapp' }, { cookie: 'altana_medicao=denied' }));
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 1);
+    assert.equal(response.headers.get('set-cookie'), null);
+  });
+});
+
 test('formulário WhatsApp usa form_whatsapp e respeita contexto de financiamento', async () => {
   await withMocks({}, async (calls) => {
     const response = await handler.fetch(request({ source: 'whatsapp', placement: 'financiamento' }));
@@ -154,3 +175,4 @@ test('sem RESEND_API_KEY retorna 503, antes de tentar qualquer envio', async () 
     assert.equal(calls.length, 0);
   });
 });
+

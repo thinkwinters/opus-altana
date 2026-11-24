@@ -107,16 +107,14 @@
       startedForms.add(key);
       dataLayer.push({ event: 'form_start', form_id: formId, lead_placement: placement });
     },
-    recordFormSubmit(formId, placement) {
-      if (choice !== 'granted') return;
-      dataLayer.push({ event: 'form_submit', form_id: formId, lead_placement: placement });
-    },
     recordLead(eventId, formId, placement) {
       if (choice !== 'granted' || !eventId || confirmedLeads.has(eventId)) return;
       confirmedLeads.add(eventId);
       const params = { form_id: formId, lead_placement: placement };
+      dataLayer.push({ event: 'form_submit', event_id: eventId, ...params });
       dataLayer.push({ event: 'generate_lead', event_id: eventId, ...params });
       window.fbq('trackSingle', pixelId, 'Lead', params, { eventID: eventId });
     }
   };
 })();
+
