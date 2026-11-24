@@ -16,7 +16,7 @@ const lead = {
   consent: true
 };
 
-function request(fields = {}, { cookie = 'altana_medicao=granted', originHeader = origin } = {}) {
+function request(fields = {}, { cookie = '', originHeader = origin } = {}) {
   return new Request(origin + '/api/leads', {
     method: 'POST',
     headers: {
@@ -35,7 +35,7 @@ function sha(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function withMocks({ resendStatus = 200, consentCookie = 'altana_medicao=granted' } = {}, run) {
+function withMocks({ resendStatus = 200 } = {}, run) {
   const previous = {
     fetch: globalThis.fetch,
     resend: process.env.RESEND_API_KEY,
@@ -59,7 +59,7 @@ function withMocks({ resendStatus = 200, consentCookie = 'altana_medicao=granted
     throw new Error('Unexpected request ' + url);
   };
 
-  return Promise.resolve().then(() => run(calls, consentCookie)).finally(() => {
+  return Promise.resolve().then(() => run(calls)).finally(() => {
     globalThis.fetch = previous.fetch;
     for (const [key, value] of [
       ['RESEND_API_KEY', previous.resend],
@@ -111,32 +111,28 @@ test('contato envia e-mail aos dois destinatários e Lead CAPI com advanced matc
   });
 });
 
-test('Lead CAPI respeita a opção de cookies', async () => {
-  await withMocks({}, async (calls) => {
-    const response = await handler.fetch(request({}, { cookie: 'altana_medicao=denied' }));
-    assert.equal(response.status, 200);
-    assert.equal(calls.length, 1);
-  });
-});
-
-test('contato e WhatsApp entregam sem escolha de cookies e sem evento CAPI', async () => {
+test('contato e WhatsApp confirmados usam a medição do projeto sem gravar aceite de cookies', async () => {
   for (const source of ['contact', 'whatsapp']) {
-    await withMocks({}, async (calls) => {
-      const response = await handler.fetch(request({ source }, { cookie: '' }));
-      assert.equal(response.status, 200);
-      assert.equal((await response.json()).ok, true);
-      assert.equal(calls.length, 1);
-      assert.match(calls[0].url, /api\.resend\.com\/emails/);
-    });
+    for (const cookie of ['', 'altana_medicao=denied', 'altana_medicao=granted']) {
+      await withMocks({}, async (calls) => {
+        const response = await handler.fetch(request({ source }, { cookie }));
+        assert.equal(response.status, 200);
+        assert.equal((await response.json()).ok, true);
+        assert.equal(calls.length, 2);
+        assert.match(calls[0].url, /api\.resend\.com\/emails/);
+        assert.match(calls[1].url, /graph\.facebook\.com/);
+        assert.equal(response.headers.get('set-cookie'), null);
+      });
+    }
   }
 });
 
-test('WhatsApp entrega com medição recusada sem reverter a recusa nem enviar CAPI', async () => {
+test('sem token CAPI a consulta ainda é entregue', async () => {
   await withMocks({}, async (calls) => {
-    const response = await handler.fetch(request({ source: 'whatsapp' }, { cookie: 'altana_medicao=denied' }));
+    delete process.env.META_CAPI_ACCESS_TOKEN;
+    const response = await handler.fetch(request());
     assert.equal(response.status, 200);
     assert.equal(calls.length, 1);
-    assert.equal(response.headers.get('set-cookie'), null);
   });
 });
 
@@ -175,4 +171,5 @@ test('sem RESEND_API_KEY retorna 503, antes de tentar qualquer envio', async () 
     assert.equal(calls.length, 0);
   });
 });
+
 

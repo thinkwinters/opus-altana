@@ -10,7 +10,7 @@ Importe o repositório na Vercel com a raiz do projeto no mesmo nível de `verce
 - `dist/politica-de-privacidade.html` contém a política acessível pelo rodapé e pelos formulários.
 - `dist/site.js` controla o menu, as galerias, a implantação e as imagens ampliáveis.
 - `dist/contact.js` controla os formulários, o seletor de país e o modal.
-- `dist/tracking.js` carrega o Google Tag Manager e o Pixel da Meta conforme a preferência de medição.
+- `dist/tracking.js` carrega o Google Tag Manager e o Pixel da Meta ao abrir a página.
 - `api/leads.mjs` valida nome, e-mail, telefone e consentimento e encaminha as consultas aos endereços de atendimento.
 
 ## Busca e compartilhamento
@@ -37,11 +37,12 @@ Os formulários `form_contato` e `form_whatsapp` enviam nome, e-mail, telefone, 
 
 Os formulários usam os IDs `form_contato` e `form_whatsapp`. O evento `generate_lead` na camada de dados indica o formulário e a origem da consulta, inclusive quando o modal abre pela seção de financiamento.
 
-O envio dos dados à equipe comercial funciona com medição aceita, recusada ou ainda não escolhida; enviar o formulário não altera a preferência de cookies. O Pixel registra `PageView` uma vez por carregamento autorizado. A camada de dados do GTM registra `page_view` e `form_start` somente com permissão de medição. `form_submit`, `generate_lead` e o `Lead` do Pixel são emitidos juntos, uma vez por `event_id`, apenas após confirmação do servidor e com medição permitida. Cliques e tentativas nativas dos formulários não propagam para a coleta automática; a alternativa de WhatsApp exibida após falha continua disponível sem registrar uma conversão de envio confirmado. Use `generate_lead` para a conversão e mantenha uma única origem por evento nas configurações compartilhadas do GTM/GA4.
+O GTM e o Pixel carregam imediatamente, sem aviso ou interface de preferência de cookies. O Pixel registra `PageView` uma vez por carregamento; a camada de dados registra `page_view` e `form_start`. O envio dos dados à equipe comercial funciona independentemente dos cookies. `form_submit`, `generate_lead` e o `Lead` do Pixel são emitidos juntos, uma vez por `event_id`, apenas após confirmação do servidor. Cliques e tentativas nativas dos formulários não propagam para a coleta automática; a alternativa de WhatsApp exibida após falha continua disponível sem registrar uma conversão de envio confirmado. O site não grava aceite de cookies nem declara consentimento do visitante por abrir a página ou enviar o formulário. Use `generate_lead` para a conversão e mantenha uma única origem por evento nas configurações compartilhadas do GTM/GA4.
 
-Os identificadores **GTM `GTM-T83GNS9`** e **Pixel `1292606731496968`** já estão no `dist/tracking.js`, executados após consentimento de medição. A construção de produção também aceita, opcionalmente, `GTM_CONTAINER_ID` e `META_PIXEL_ID` na Vercel; sem essas variáveis, usa os dois IDs definidos no projeto.
+Os identificadores **GTM `GTM-T83GNS9`** e **Pixel `1292606731496968`** já estão no `dist/tracking.js`. A construção de produção também aceita, opcionalmente, `GTM_CONTAINER_ID` e `META_PIXEL_ID` na Vercel; sem essas variáveis, usa os dois IDs definidos no projeto.
 
-Para a **API de Conversões da Meta**, configure `META_CAPI_ACCESS_TOKEN` como **variável sensível de produção na hospedagem do domínio público**, jamais no GitHub. Após envio de e-mail aceito e com permissão de medição, a API registra `Lead` para o mesmo Pixel. Usa o mesmo `event_id` do navegador para deduplicação e `event_source_url` com a URL completa. Faz correspondência avançada via SHA-256 de e-mail, telefone, primeiro e último nome e identificador externo estável, além de encaminhar user agent, IP válido e os cookies `_fbp`/`_fbc` quando disponíveis. Não envia nome, telefone ou e-mail em texto aberto na chamada à Meta.
+Para a **API de Conversões da Meta**, configure `META_CAPI_ACCESS_TOKEN` como **variável sensível de produção na hospedagem do domínio público**, jamais no GitHub. Após envio de e-mail aceito, a API registra `Lead` para o mesmo Pixel conforme a configuração de medição do projeto, sem depender do antigo cookie de preferência. Usa o mesmo `event_id` do navegador para deduplicação e `event_source_url` com a URL completa. Faz correspondência avançada via SHA-256 de e-mail, telefone, primeiro e último nome e identificador externo estável, além de encaminhar user agent, IP válido e os cookies `_fbp`/`_fbc` quando disponíveis. Não envia nome, telefone ou e-mail em texto aberto na chamada à Meta.
 
 **Atenção:** o projeto da Vercel vinculado ao domínio precisa estar acessível para cadastrar as variáveis e executar um novo deploy. Credenciais antigas de produção não são recuperáveis pelo código nem pelo GitHub. Em `Events Manager` da Meta, confira também a qualidade dos eventos e as opções de correspondência automática do Pixel; a integração do servidor é independente desse controle.
+
 

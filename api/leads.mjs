@@ -89,7 +89,6 @@ function getBrazilDateTime(date) {
 
 async function sendMetaLead(request, lead) {
   const accessToken = process.env.META_CAPI_ACCESS_TOKEN;
-  if (cookieValue(request, 'altana_medicao') !== 'granted') return;
   if (!accessToken) {
     console.warn('meta_capi_access_token_missing');
     return;
@@ -266,3 +265,4 @@ export default {
     return reply(200, { ok: true, eventId: requestId });
   }
 };
+
