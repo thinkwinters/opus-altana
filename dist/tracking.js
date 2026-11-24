@@ -36,6 +36,7 @@
       pixel.version = '2.0';
       window.fbq = window._fbq = pixel;
     }
+    window.fbq('set', 'autoConfig', false, pixelId);
     window.fbq('init', pixelId);
     window.fbq('trackSingle', pixelId, 'PageView');
     if (needsPixelScript) loadScript('https://connect.facebook.net/en_US/fbevents.js');
